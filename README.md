@@ -1,27 +1,27 @@
-# Simple Mux "Gemux" | JUST FOR FUN
+# Simple Mux "sumux" | JUST FOR FUN
 
 ## Getting Started
 ```bash
-$ go get https://github.com/bagus2x/gemux
+$ go get https://github.com/bagus2x/sumux
 ```
 
 run example
 
 ```bash
-$ git clone https://github.com/bagus2x/gemux.git
-$ cd gemux
+$ git clone https://github.com/bagus2x/sumux.git
+$ cd sumux
 $ make example
 
 ```
 
 ## Example
     
-[link](https://github.com/bagus2x/gemux/tree/main/example)
+[link](https://github.com/bagus2x/sumux/tree/main/example)
 
 ### Init
 
 ```go
-r := gemux.NewMux()
+r := sumux.NewMux()
 ```
 
 ### Method
@@ -44,18 +44,18 @@ r.Post("/whoami", func(w http.ResponseWriter, r *http.Request) {
 ### Group & Param
 
 ```go
-r.Group("/api/v1/user", func(r gemux.Router) {
+r.Group("/api/v1/user", func(r sumux.Router) {
     r.Get("/", func(w http.ResponseWriter, r *http.Request) {
         res.JSON(w, 200, map[string]int{"oneminusone": 1})
     })
 
     r.Get("/<name>", func(w http.ResponseWriter, r *http.Request) {
-        name, _ := gemux.Param(r, "name")
+        name, _ := sumux.Param(r, "name")
         res.JSON(w, 200, map[string]string{"name": name})
     })
 
     r.Get("/<name>/abc/<address>", func(w http.ResponseWriter, r *http.Request) {
-        p, _ := gemux.Params(r)
+        p, _ := sumux.Params(r)
         res.JSON(w, 200, p)
     })
 })
