@@ -1,4 +1,4 @@
-# Simple Mux "sumux" | JUST FOR FUN
+# Simple Mux "sumux"
 
 ## Getting Started
 ```bash
