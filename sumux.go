@@ -12,111 +12,101 @@ const (
 	pathWithKey key = iota
 )
 
+// HandleFunc -
+type HandleFunc func(w http.ResponseWriter, r *http.Request)
+
+// PathCallbackMap -
+type PathCallbackMap map[string]PathCallback
+
 // PathCallback -
 type PathCallback struct {
+	method string
 	path   string
-	pathXp string
 	f      func(w http.ResponseWriter, r *http.Request)
 }
 
-// ServeGeMux -
-type ServeGeMux struct {
-	groupPath string
-	pcbPut    []PathCallback
-	pcbGet    []PathCallback
-	pcbPost   []PathCallback
-	pcbPatch  []PathCallback
-	pcbDelete []PathCallback
+// ServeSumux -
+type ServeSumux struct {
+	HandleFuncs []HandleFunc
+	groupPath   string
+	pcm         PathCallbackMap
 }
 
-func (sg ServeGeMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		for _, hp := range sg.pcbGet {
-			if equalPath(r.URL.Path, hp.pathXp) {
-				ctx := context.WithValue(r.Context(), pathWithKey, hp.path)
-				hp.f(w, r.WithContext(ctx))
-				return
-			}
-		}
-		break
+// NewServeSumux -
+func NewServeSumux() *ServeSumux {
+	pcm := make(PathCallbackMap)
+	return &ServeSumux{pcm: pcm}
+}
 
-	case http.MethodPost:
-		for _, hp := range sg.pcbPost {
-			if equalPath(r.URL.Path, hp.pathXp) {
-				ctx := context.WithValue(r.Context(), pathWithKey, hp.path)
-				hp.f(w, r.WithContext(ctx))
-				return
-			}
+func (sg ServeSumux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	for k, v := range sg.pcm {
+		if equalPath(r.URL.Path, k) && v.method == r.Method {
+			ctx := context.WithValue(r.Context(), pathWithKey, v.path)
+			v.f(w, r.WithContext(ctx))
+			return
 		}
-		break
-
-	case http.MethodPut:
-		for _, hp := range sg.pcbPut {
-			if equalPath(r.URL.Path, hp.pathXp) {
-				ctx := context.WithValue(r.Context(), pathWithKey, hp.path)
-				hp.f(w, r.WithContext(ctx))
-				return
-			}
-		}
-		break
-
-	case http.MethodDelete:
-		for _, hp := range sg.pcbGet {
-			if equalPath(r.URL.Path, hp.pathXp) {
-				ctx := context.WithValue(r.Context(), pathWithKey, hp.path)
-				hp.f(w, r.WithContext(ctx))
-				return
-			}
-		}
-		break
-
-	case http.MethodPatch:
-		for _, hp := range sg.pcbPatch {
-			if equalPath(r.URL.Path, hp.pathXp) {
-				ctx := context.WithValue(r.Context(), pathWithKey, hp.path)
-				hp.f(w, r.WithContext(ctx))
-				return
-			}
-		}
-		break
 	}
 
 	http.Error(w, "Path Not Found", 404)
 }
 
 // Get -
-func (sg *ServeGeMux) Get(path string, f func(w http.ResponseWriter, r *http.Request)) {
+func (sg *ServeSumux) Get(path string, f func(w http.ResponseWriter, r *http.Request)) {
 	path = concatPath(sg.groupPath, path)
-	sg.pcbGet = append(sg.pcbGet, PathCallback{path, compiledPath(path), f})
+	cp := compiledPath(path)
+	sg.pcm[cp] = PathCallback{
+		method: "GET",
+		path:   path,
+		f:      f,
+	}
 }
 
 // Post -
-func (sg *ServeGeMux) Post(path string, f func(w http.ResponseWriter, r *http.Request)) {
+func (sg *ServeSumux) Post(path string, f func(w http.ResponseWriter, r *http.Request)) {
 	path = concatPath(sg.groupPath, path)
-	sg.pcbPost = append(sg.pcbPost, PathCallback{path, compiledPath(path), f})
+	cp := compiledPath(path)
+	sg.pcm[cp] = PathCallback{
+		method: "POST",
+		path:   path,
+		f:      f,
+	}
 }
 
 // Put -
-func (sg *ServeGeMux) Put(path string, f func(w http.ResponseWriter, r *http.Request)) {
+func (sg *ServeSumux) Put(path string, f func(w http.ResponseWriter, r *http.Request)) {
 	path = concatPath(sg.groupPath, path)
-	sg.pcbPut = append(sg.pcbPut, PathCallback{path, compiledPath(path), f})
+	cp := compiledPath(path)
+	sg.pcm[cp] = PathCallback{
+		method: "PUT",
+		path:   path,
+		f:      f,
+	}
 }
 
 // Delete -
-func (sg *ServeGeMux) Delete(path string, f func(w http.ResponseWriter, r *http.Request)) {
+func (sg *ServeSumux) Delete(path string, f func(w http.ResponseWriter, r *http.Request)) {
 	path = concatPath(sg.groupPath, path)
-	sg.pcbDelete = append(sg.pcbDelete, PathCallback{path, compiledPath(path), f})
+	cp := compiledPath(path)
+	sg.pcm[cp] = PathCallback{
+		method: "DELETE",
+		path:   path,
+		f:      f,
+	}
 }
 
 // Patch -
-func (sg *ServeGeMux) Patch(path string, f func(w http.ResponseWriter, r *http.Request)) {
+func (sg *ServeSumux) Patch(path string, f func(w http.ResponseWriter, r *http.Request)) {
 	path = concatPath(sg.groupPath, path)
-	sg.pcbPatch = append(sg.pcbPatch, PathCallback{path, compiledPath(path), f})
+	cp := compiledPath(path)
+	sg.pcm[cp] = PathCallback{
+		method: "PATCH",
+		path:   path,
+		f:      f,
+	}
 }
 
 // Group -
-func (sg *ServeGeMux) Group(path string, f func(r Router)) {
+func (sg *ServeSumux) Group(path string, f func(r Router)) {
 	sg.groupPath += path
 	f(sg)
 	sg.groupPath = ""
@@ -139,11 +129,11 @@ func concatPath(groupPath string, path string) string {
 	return groupPath
 }
 
-func equalPath(p1, p2 string) bool {
-	if p2 == "/" {
-		return p1 == p2
+func equalPath(path, pathXp string) bool {
+	if pathXp == "/" {
+		return path == pathXp
 	}
 
-	rgx := regexp.MustCompile(p2)
-	return rgx.MatchString(p1)
+	rgx := regexp.MustCompile(pathXp)
+	return rgx.MatchString(path)
 }

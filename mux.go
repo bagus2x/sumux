@@ -6,16 +6,20 @@ import (
 
 // Mux -
 type Mux struct {
-	ServeGeMux
-	middls []func(http.Handler) http.Handler
+	*ServeSumux
+	adapter []func(http.Handler) http.Handler
+	Log     bool
 }
 
 func (m Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	defer simpleLog(r.Method, r.URL.Path)()
-	var h http.Handler = &m.ServeGeMux
+	if m.Log {
+		defer simpleLog(r.Method, r.URL.Path)()
+	}
 
-	for i := len(m.middls) - 1; i >= 0; i-- {
-		h = m.middls[i](h)
+	var h http.Handler = m.ServeSumux
+
+	for i := len(m.adapter) - 1; i >= 0; i-- {
+		h = m.adapter[i](h)
 	}
 
 	h.ServeHTTP(w, r)
@@ -23,10 +27,10 @@ func (m Mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Use -
 func (m *Mux) Use(h func(http.Handler) http.Handler) {
-	m.middls = append(m.middls, h)
+	m.adapter = append(m.adapter, h)
 }
 
 // NewMux -
 func NewMux() Mux {
-	return Mux{}
+	return Mux{ServeSumux: NewServeSumux()}
 }
