@@ -15,13 +15,13 @@ const (
 // HandleFunc -
 type HandleFunc func(w http.ResponseWriter, r *http.Request)
 
-// PathCallbackMap -
-type PathCallbackMap map[string]PathCallback
+// Method -
+type Method map[string][]PathCallback
 
 // PathCallback -
 type PathCallback struct {
-	method string
 	path   string
+	pathXp string
 	f      func(w http.ResponseWriter, r *http.Request)
 }
 
@@ -29,20 +29,20 @@ type PathCallback struct {
 type ServeSumux struct {
 	HandleFuncs []HandleFunc
 	groupPath   string
-	pcm         PathCallbackMap
+	pcm         Method
 }
 
 // NewServeSumux -
 func NewServeSumux() *ServeSumux {
-	pcm := make(PathCallbackMap)
+	pcm := make(Method)
 	return &ServeSumux{pcm: pcm}
 }
 
 func (sg ServeSumux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	for k, v := range sg.pcm {
-		if equalPath(r.URL.Path, k) && v.method == r.Method {
-			ctx := context.WithValue(r.Context(), pathWithKey, v.path)
-			v.f(w, r.WithContext(ctx))
+	for _, pc := range sg.pcm[r.Method] {
+		if equalPath(r.URL.Path, pc.pathXp) {
+			ctx := context.WithValue(r.Context(), pathWithKey, pc.path)
+			pc.f(w, r.WithContext(ctx))
 			return
 		}
 	}
@@ -53,56 +53,31 @@ func (sg ServeSumux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // Get -
 func (sg *ServeSumux) Get(path string, f func(w http.ResponseWriter, r *http.Request)) {
 	path = concatPath(sg.groupPath, path)
-	cp := compiledPath(path)
-	sg.pcm[cp] = PathCallback{
-		method: "GET",
-		path:   path,
-		f:      f,
-	}
+	sg.pcm["GET"] = append(sg.pcm["GET"], PathCallback{path, compiledPath(path), f})
 }
 
 // Post -
 func (sg *ServeSumux) Post(path string, f func(w http.ResponseWriter, r *http.Request)) {
 	path = concatPath(sg.groupPath, path)
-	cp := compiledPath(path)
-	sg.pcm[cp] = PathCallback{
-		method: "POST",
-		path:   path,
-		f:      f,
-	}
+	sg.pcm["POST"] = append(sg.pcm["POST"], PathCallback{path, compiledPath(path), f})
 }
 
 // Put -
 func (sg *ServeSumux) Put(path string, f func(w http.ResponseWriter, r *http.Request)) {
 	path = concatPath(sg.groupPath, path)
-	cp := compiledPath(path)
-	sg.pcm[cp] = PathCallback{
-		method: "PUT",
-		path:   path,
-		f:      f,
-	}
+	sg.pcm["PUT"] = append(sg.pcm["PUT"], PathCallback{path, compiledPath(path), f})
 }
 
 // Delete -
 func (sg *ServeSumux) Delete(path string, f func(w http.ResponseWriter, r *http.Request)) {
 	path = concatPath(sg.groupPath, path)
-	cp := compiledPath(path)
-	sg.pcm[cp] = PathCallback{
-		method: "DELETE",
-		path:   path,
-		f:      f,
-	}
+	sg.pcm["DELETE"] = append(sg.pcm["DELETE"], PathCallback{path, compiledPath(path), f})
 }
 
 // Patch -
 func (sg *ServeSumux) Patch(path string, f func(w http.ResponseWriter, r *http.Request)) {
 	path = concatPath(sg.groupPath, path)
-	cp := compiledPath(path)
-	sg.pcm[cp] = PathCallback{
-		method: "PATCH",
-		path:   path,
-		f:      f,
-	}
+	sg.pcm["PATCH"] = append(sg.pcm["PATCH"], PathCallback{path, compiledPath(path), f})
 }
 
 // Group -
