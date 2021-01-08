@@ -9,5 +9,6 @@ type Router interface {
 	Put(path string, f func(w http.ResponseWriter, r *http.Request))
 	Delete(path string, f func(w http.ResponseWriter, r *http.Request))
 	Patch(path string, f func(w http.ResponseWriter, r *http.Request))
+	Options(path string, f func(w http.ResponseWriter, r *http.Request))
 	Group(path string, f func(r Router))
 }
