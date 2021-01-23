@@ -8,6 +8,7 @@ import (
 
 // JSON - send a json response
 func JSON(w http.ResponseWriter, code int, data interface{}) {
+	w.WriteHeader(code)
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		http.Error(w, "Internal Server Error", 500)
@@ -16,12 +17,14 @@ func JSON(w http.ResponseWriter, code int, data interface{}) {
 
 // Plain - send a plain text
 func Plain(w http.ResponseWriter, code int, data interface{}) {
+	w.WriteHeader(code)
 	w.Header().Set("Content-Type", "text/plain")
 	fmt.Fprint(w, data)
 }
 
 // Send html string
 func Send(w http.ResponseWriter, code int, data interface{}) {
+	w.WriteHeader(code)
 	w.Header().Set("Content-Type", "text/html")
 	fmt.Fprint(w, data)
 }
